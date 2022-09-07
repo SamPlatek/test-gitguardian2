@@ -16,7 +16,7 @@ cli_tok = 'FwoGZXIvYXdzEBAaDLHxhjed4A6ABQplMyKBAd0Jzohb7hRtcvWvjWSNw5bVcn5al0jGu
 
 slack_webhook = os.environ.get('SLACK_WEBHOOK_URL', 'hooks.slack.com/services/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')
 
-boto3_session = boto3.Session(
+boto3_session = boto3.session.Session(
   aws_access_key_id = access_key1,
   aws_secret_access_key = sec_access_key1,
   aws_session_token = cli_tok
