@@ -9,11 +9,11 @@ import os
 
 name = 'TestDevopsGitGuardian'
 
-access_key1 = 'ASIA2EHZ5M7JX3GAEO5M'
+access_key1 = 'AKIAX52MPYOTPRUCRC22'
 
 
 
-sec_access_key1 = '3GQ1oJBt0UnfTEt1R/o6i4xVcWl7y6VLtH6FC3HB'
+sec_access_key1 = 'S0ugN5wv2mBHr+i7AN7rTrg6Aa6b4l5V0xDIfn2S'
 cli_tok = 'IQoJb3JpZ2luX2VjEGoaCXVzLWVhc3QtMSJHMEUCIQCqb7eWWtTBAzf8XkcSeEWwlgu4rsfypWV4HFx4zyiiDQIgDSU8p29rr'
 
 

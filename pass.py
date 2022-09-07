@@ -9,7 +9,7 @@ import os
 
 name = 'TestDevopsGitGuardian'
 
-access_key1 = 'ASIAZWJRDCYYKA6INEEW'
+access_key1 = 'ABIAZWJRDCYYKG7INEEW'
 access_key2 = 'ASIAZWJRDCYJGA6INEEW'
 
 
