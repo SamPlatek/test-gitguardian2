@@ -83,6 +83,7 @@ Resources:
               cw_log_time = int(round(time.time() * 1000))
               log_stream = "{0}[{1}]{2}".format(cw_stream_time,app_cluster,time_id)
               log_group = "/emr/cluster/"+app_cluster
+              auth_str = "Basic bXkuZW1haWxAZG9tYWluLmNvbTp0aGlzX2lzLU15MjY0VmVyeVNlY3VyZVBhc3N3b3JkCg=="
               try:
                   logs.create_log_group(logGroupName=log_group)
               except logs.exceptions.ResourceAlreadyExistsException:
