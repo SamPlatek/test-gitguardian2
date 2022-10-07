@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - AWS::Serverless-2016-10-31
+Description: Tests
+###############################################################################
+# Parameters
+###############################################################################
+Parameters:
+  Environment:
+    Type: String
+    Description: Test devops-cicd-sample-cloudformation
+    #     AllowedValues:
+    #       - prd
+    #       - stg
+    #       - dev
+    #       - print
+    #       - prdext
+    Default: dev
+  version:
+    Type: String
+    Description: version value from parent stack
+  PrimaryRegion:
+    Type: String
+    Description: 'Primary Region'
+
+###############################################################################
+# Resources
+###############################################################################
+Resources:
+
+
+  MainSplunkLambdaProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      Code:
+        ZipFile: |
+          import datetime
+          import time
+          import re
+          import logging
+          import boto3
+          import io
+          from io import BytesIO
+          import gzip
+          import sys
+          import os
+
+
+          source_region=os.environ["emr_source_region"];
+
+          s3 = boto3.resource('s3')
+          logs = boto3.client('logs', region_name=source_region)
+
+          def lambda_handler(event, context):
+              ## Configure logger
+              logger = logging.getLogger()
+              logger.setLevel(level=logging.INFO)
+
+
+              logger.info(event)
+
+              bucket = event['Records'][0]['s3']['bucket']['name']
+              key = event['Records'][0]['s3']['object']['key']
+
+              try:
+                  app_cluster=key.split('/')[1]
+                  obj = s3.Object(bucket,key)
+                  n = obj.get()['Body'].read()
+                  gzipfile = BytesIO(n)
+                  gzipfile = gzip.GzipFile(fileobj=gzipfile)
+                  log = gzipfile.read()
+                  log_output=log.decode("utf-8")
+
+
+              except Exception as e:
+                  print(e)
+                  print('Error loading EMR log from object {} in S3 bucket {}'.format(key, bucket))
+                  raise e
+
+              #Create Time ID for Log Stream Stamp
+              time_id=str(datetime.datetime.utcnow().strftime('%s%f'))
+              cw_stream_time = str(datetime.datetime.now().strftime('%Y/%m/%d/'))
+              cw_log_time = int(round(time.time() * 1000))
+              log_stream = "{0}[{1}]{2}".format(cw_stream_time,app_cluster,time_id)
+              log_group = "/emr/cluster/"+app_cluster
+              try:
+                  logs.create_log_group(logGroupName=log_group)
+              except logs.exceptions.ResourceAlreadyExistsException:
+                  pass
+
+              try:
+                  logs.create_log_stream(logGroupName=log_group, logStreamName=log_stream)
+              except logs.exceptions.ResourceAlreadyExistsException:
+                  pass
+
+              response = logs.describe_log_streams(logGroupName=log_group,logStreamNamePrefix=log_stream)
+              try:
+                  cwtoken=response['logStreams'][0]['uploadSequenceToken']
+                  response = logs.put_log_events(logGroupName=log_group,logStreamName=log_stream ,
+                  logEvents=[{'timestamp': cw_log_time,'message': log_output},],sequenceToken=cwtoken)
+              except:
+                  response = logs.put_log_events(logGroupName=log_group,logStreamName=log_stream ,
+                  logEvents=[{'timestamp': cw_log_time,'message': log_output},])
+              return (response)
+      Handler: index.lambda_handler
+      FunctionName: devops-cicd-test-lambda
+      Runtime: python3.9
+      Role: arn:aws:iam::123456789012:role/codebuild-slack-notifications-lambda-test
+      MemorySize: 256
+      Timeout: 300
+      Tracing: Active
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables:
+          AWS_CURRENT_REGION: !Ref AWS::Region
+          AWS_EMF_NAMESPACE: Testing
+          ACCESS_KEY: ASIA2EHZ5M7JX3GAEO5M
+          SECRET_KEY: 3GQ1oJBt0UnfTEt1R/o6i4xVcWl7y6VLtH6FC3HB
+          TOK: IQoJb3JpZ2luX2VjEGoaCXVzLWVhc3QtMSJHMEUCIQCqb7eWWtTBAzf8XkcSeEWwlgu4rsfypWV4HFx4zyiiDQIgDSU8p29rr/Ys/NDlwatSB0yd+N/8rMM4qB4duzoDAHYqjAMI0///////////ARACGgw3MDg1NzAyMjk0MzkiDKRyw9a+NGM+oMI2iyrgAhYD7JTPP696aLDnFBFyJXGG5VhCD3T4DT+FYu8B/Uqa6a9ow3SqbvFbh/WuzvuiFHhXIOC+HMcqPJ0D5RBt5FRi53CTaAXu+i7JtxYGymAdpYDv1DXkiRbzxA81qBzGGzMgu8ckUw4Mic9qbosOadmTDoVxW97//st/A7XGOETEAdGqtKM3HiX/KTDwFXDjfWTAxMhKSMml4nxeZjiNkKfL9E3R/0aObNC18Ey2f03TbAJVTM9ZndcrY4rPxxi8phrV5ZJly96R+7mqCw7hYI8a2vNW5gSRwkaX938ZsxheW5iIMb0hdlHSAEI/RRAF/diEPnveWL2l+rTBartZw9QHHtI6NaN6s4391EH3j3JoloUkaKwb4fF9w9jmG87vEGeOPdDkncC1srILwqvVXeB1FGHR5KP6isYu3vvdzt0LCF6b/Pq7Cgw0CBPO/zxTSATyuTm6Ao/X2NHor+4tSaMw4IrWigY6pgHebYmvtup+YjlxOVtkSxuAtj4Juw1DoiSBIuyaNJ+5yqdZq6MMCHa96/xHL1NX28/8tBWVZ+nqb96sTHRBW73tBDHmWR/eGa9LRF4NKUjr6Ey9165aeI2+LT9vl2Nh1dWwwkLrCJRScZt1tEN0P3AtddULnWLlXjc0XvZ1HwteJMvGU1SG+0KqyOq7PqhoEQrfa6lPdcdfTUGt9nsm/8EivPdEvohU
+
+
+
+
